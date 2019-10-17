@@ -1,0 +1,7 @@
+DisableReaction(CREATEPROCESSA+)
+DisableReaction(CREATEPROCESSW+)
+DisableReaction(CREATEREMOTETHREAD+)
+DisableReaction(CREATETHREAD+)
+DisableReaction(OPENPROCESS+)
+DisableReaction(SETTHREADCONTEXT+)
+DisableReaction(RESUMETHREAD+)
