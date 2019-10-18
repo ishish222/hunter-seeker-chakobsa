@@ -1,10 +1,12 @@
-# initial record
+# acad binner
 Version(2)
 Include(scripts/common/initiating.sc)
 Include(scripts/common/debugging.sc)
 
 DeployFolders:
-    GlobPattern(_FUZZING_SAMPLES/ableton/crashes/crashes_02/*als)
+#    GlobPattern(_FUZZING_SAMPLES/xara/crashes_01/*xar)
+#    GlobPattern(_FUZZING_SAMPLES/xara/crashes_02/*xar)
+    GlobPattern(_FUZZING_SAMPLES/xara/03_crashes_01/*xar)
     HostDeployInputGlob
 
     Return
@@ -35,7 +37,6 @@ BinSample:
         RunCommand
 
         TracerDebugContinue
-
         goto(BinSample_decision)
 
     BinSample_Sleep:
@@ -51,37 +52,46 @@ BinSample:
         Decision=(
             GotLoaded:BinSample_Uninteresting,
             Aborted:BinSample_Uninteresting,
-            EXCEPTION:BinSample_GotException,
-            TIMEOUT:BinSample_Timeout,
-            default:BinSample_IgnoreAndContinue
+            RE:BinSample_GotException,
+            TO:BinSample_Timeout,
+            default:BinSample_Inform
             )
 
     BinSample_GotException:
         TracerGetExceptionCode
-        CheckStrStr(0xe06d7363)=(N:BinSample_Interesting)
+        CheckStrStr(0xc0000004)=(Y:BinSample_Interesting)
+        CheckStrStr(0xc0000005)=(Y:BinSample_Interesting)
+        TracerGetExceptionChance
+        CheckStrStr(0x00000000)=(Y:BinSample_Interesting)
 
+    BinSample_Continue:
         TracerDebugContinue(0x80010001)
         goto(BinSample_decision)
 
-        BinSample_Interesting:
-            Call(BinCrash)
-            goto(BinSample_finish)
+    BinSample_Inform:
+        Beep(Xara%20binning%20unexpected%20behavior)
+        Pause
+        Continue=
+        goto(BinSample_decision)
 
-        BinSample_Timeout:
-            Call(BinFailed)
-            BinnerReportTimeout
-            goto(BinSample_finish)
+    BinSample_Interesting:
+        Call(BinCrash)
+        goto(BinSample_finish)
 
-        BinSample_Uninteresting:
-            Call(BinFailed)
-            goto(BinSample_finish)
+    BinSample_Timeout:
+        Call(BinFailed)
+        BinnerReportTimeout
+        goto(BinSample_finish)
 
-        # will reload qemu
-        BinSample_finish:
-        Return
+    BinSample_Uninteresting:
+        Call(BinFailed)
+        goto(BinSample_finish)
+
+    # will reload qemu
+    BinSample_finish:
+    Return
 
 BinCrash:
-    # TODO: move sample to the saved directory
     TracerGetExceptionAddressStr
     Push
     BinnerConfirmSample
@@ -100,8 +110,8 @@ Restart:
 
 Binning:
     Binning_loop:
-        Call(BinSample)
         BinnerBatchExhausted=(Y:Binning_finish)
+        Call(BinSample)
         BinnerReport
         Call(BinningReload)
         goto(Binning_loop)
@@ -109,31 +119,23 @@ Binning:
     Binning_finish:
     Return
 
-BinningReload:
-    QemuLoad(armed)
-
-    RegisterReactions(self+0x169a9db,GotLoaded,0x0)
+EnableNecessaryReactions:
+    RegisterReactions(self+0xae8850,GotLoaded,0x0)
     EnableReaction(GotLoaded)
 
-    RegisterReactions(self+0xea439b,Aborted,0x0)
-    EnableReaction(Aborted)
+    SetDebugTimeout(20000)
 
-    SetDebugTimeout(60000)
+    Return
 
+BinningReload:
+    QemuLoad(armed)
+    Call(EnableNecessaryReactions)
     Return
 
 StartBinning:
     QemuStart
     QemuLoad(armed)
-
-    RegisterReactions(self+0x169a9db,GotLoaded,0x0)
-    EnableReaction(GotLoaded)
-
-    RegisterReactions(self+0xea439b,Aborted,0x0)
-    EnableReaction(Aborted)
-
-    SetDebugTimeout(60000)
-
+    Call(EnableNecessaryReactions)
     Return
 
 ConfigureBinner:
@@ -142,6 +144,7 @@ ConfigureBinner:
     Return
 
 Main:
+    ResetTime
     RegisterSignals(Exception)
 
     Call(Intro)
@@ -150,11 +153,23 @@ Main:
     Call(StartBinning)
     Call(Binning)
 
-    TracerDebugContinue
-    goto(decision)
+    goto(finish)
+
+RC:
+    FlushFiles
+    Beep(Tracer%20crashed)
+    Pause
 
 Default:
+    Continue=
+
+Exception:
+    Beep(Binner%20exception)
+RX:
+    ReadTime
+    Beep(Xara%20binning%20finished)
 finish:
+    #FlushFiles
     BinnerReport
     QemuQuit
 

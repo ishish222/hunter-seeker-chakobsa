@@ -5,7 +5,7 @@ Include(scripts/common/debugging.sc)
 
 DeployFolders:
     #GlobPattern(_FUZZING_SAMPLES/ableton/crashes/binned_01/0x011e5423/*)
-    GlobPattern(_FUZZING_SAMPLES/ableton/crashes/binned_01/0x011f1dc3/*)
+    GlobPattern(_FUZZING_SAMPLES/xara/03_crashes_03/*.xar)
     HostDeployInputGlob
 
     Return
@@ -19,15 +19,16 @@ Main:
     QemuStart
     QemuLoad(loaded)
 
-    GetPIDByMatch(Trial)
+    GetPIDByMatch(WebDesigner)
     Push
     SetPID
 
     Call(AttachFileLog)
 
     Main_Copy:
- #       RunCommand(copy \\10.0.2.4\qemu\input\tmp1ff6wa7z.als c:\users\john\desktop\sample.als)
-        RunCommand(copy \\10.0.2.4\qemu\input\tmp1o02gue4.als c:\users\john\desktop\sample.als)
+#        RunCommand(copy \\10.0.2.4\qemu\input\tmp1ff6wa7z.als c:\users\john\desktop\sample.als)
+#        RunCommand(copy \\10.0.2.4\qemu\input\tmp1o02gue4.xar c:\users\john\desktop\sample.xar)
+        RunCommand(copy \\10.0.2.4\qemu\input\origin05_7zglca66.xar c:\users\john\desktop\sample.xar)
         CheckStrStr(cannot)=(Y:Main_Sleep)
         CheckStrStr(network)=(Y:Main_Sleep)
 
@@ -40,7 +41,7 @@ Main:
     AutorepeatReaction(CreateFileA_start)
     AutorepeatReaction(CreateFileW_start)
 
-    RunCommand(start c:\users\john\desktop\sample.als)
+    RunCommand(start c:\users\john\desktop\sample.xar)
     Continue=
 
     Main_Sleep:
@@ -145,7 +146,7 @@ ReadFile_end:
 StartAnalysis:
     DumpMemory
     SecureAllSections
-    #AddScannedLocation(ESP:0x50)
+    AddScannedLocation(ESP:0x50)
 
 #    Call(RegisterEnableBuiltin)
 
@@ -162,11 +163,14 @@ StartAnalysis:
 
 RE:
     TracerGetExceptionCode
-    CheckStrStr(0xe06d7363)=(Y:RE_continue)
+    CheckStrStr(0xc0000004)=(Y:RE_crash)
+    CheckStrStr(0xc0000005)=(Y:RE_crash)
+    TracerGetExceptionChance
+    CheckStrStr(0x00000000)=(Y:RE_crash)
+    goto(RE_continue)
 
 RE_crash:
-    FlushFiles
-    Pause
+    goto(finish)
 
 RE_continue:
     Continue(0x80010001)=
@@ -174,7 +178,17 @@ RE_continue:
 Default:
     Continue=
 
-Exception:
+RC:
+    FlushFiles
+    Beep(Tracer%20crashed)
+    Pause
+EN:
+RX:
+    ReadTime
 finish:
+    Beep(Recording%20tainted%20Xara%20finished)
+    FlushFiles
+    Pause
+Exception:
     QemuQuit
 

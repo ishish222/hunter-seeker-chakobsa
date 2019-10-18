@@ -4,9 +4,8 @@ Include(scripts/common/initiating.sc)
 Include(scripts/common/debugging.sc)
 
 DeployFolders:
-    GlobPattern(_FUZZING_SAMPLES/xara/00_originals_03/*.xar)
-    #GlobPattern(_FUZZING_SAMPLES/xara/binned_02/0x00c702de/*.xar)
-    HostDeployInputGlob
+    GlobPattern(_FUZZING_SAMPLES/xara/originals_01/*.xar)
+     HostDeployInputGlob
 
     Return
 
@@ -19,6 +18,7 @@ Main:
     QemuStart
     QemuLoad(loaded)
 
+
     GetPIDByMatch(WebDesigner)
     Push
     SetPID
@@ -26,51 +26,61 @@ Main:
     Call(AttachFileLog)
 
     Main_Copy:
-        RunCommand(copy \\10.0.2.4\qemu\input\origin_19.xar c:\users\john\desktop\sample.xar)
+        RunCommand(copy \\10.0.2.4\qemu\input\origin01.xar c:\users\john\desktop\sample.xar)
         CheckStrStr(cannot)=(Y:Main_Sleep)
         CheckStrStr(network)=(Y:Main_Sleep)
 
-    RegisterReactions(self+0xae85bf,ST,0x0)
-    RegisterReactions(self+0xae8850,EN,0x0)
-
-    EnableReaction(ST)
-    EnableReaction(EN)
+    RegisterReactions(kernel32.dll+0x000528fc,CreateFileA_start,0x0)
+    RegisterReactions(kernel32.dll+0x00050b5d,CreateFileW_start,0x0)
+    EnableReaction(CreateFileA_start)
+    EnableReaction(CreateFileW_start)
 
     RunCommand(start c:\users\john\desktop\sample.xar)
-
     Continue=
 
     Main_Sleep:
         Wait(1)
         goto(Main_Copy)
 
-ST:
-    DisableReaction(ST)
+CreateFileA_start:
+    ReadArgAnsi(0x1)
+    CheckStrStr(sample)=(N:CreateFileA_start_skip)
+    CompareCounter(1)=(Y:CreateFileA_start_skip)
     Call(StartAnalysis)
-    ResetTime
+    IncreaseCounter
+    
+
+    CreateFileA_start_skip:
+
     Continue=
 
+CreateFileW_start:
+    ReadArgUni(0x1)
+    CheckStrStr(sample)=(N:CreateFileW_start_skip)
+    CompareCounter(1)=(Y:CreateFileW_start_skip)
+    Call(StartAnalysis)
+    IncreaseCounter
+    
+    CreateFileW_start_skip:
+
+    Continue=
+    
 StartAnalysis:
-    #TracerDebugLogEnable
-
-    CurrentTID
-    Push
-    SetPriorityHigh
-
     DumpMemory
-    SecureAllSections
+    #SecureAllSections
     #AddScannedLocation(ESP:0x50)
 
-    #Call(RegisterEnableBuiltin)
+#    Call(RegisterEnableBuiltin)
 
-    ResizeOutBuffer(0x10000000)
-    ResizeModBuffer(0x1000000)
-    ChangeInterval(10000000)
+    #ResizeOutBuffer(0x10000000)
+    #ResizeModBuffer(0x1000000)
+    #ChangeInterval(10000000)
 
     #Pause
     #TracerStartTrace
     TracerStartTraceLight
     #TracerStartTraceDebug
+    TracerDebugContinueInf
     Return
 
 RE:
@@ -83,7 +93,6 @@ RE:
 
 RE_crash:
     FlushFiles
-    Beep(Xara%20crashed)
     Pause
 
 RE_continue:
@@ -99,8 +108,8 @@ RC:
 
 EN:
     ReadTime
-    Beep(Xara%20recording%20finished)
 finish:
     FlushFiles
 Exception:
     QemuQuit
+
