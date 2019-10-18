@@ -26,7 +26,7 @@ Main:
     Call(AttachFileLog)
 
     Main_Copy:
-        RunCommand(copy \\10.0.2.4\qemu\input\origin_19.xar c:\users\john\desktop\sample.xar)
+        RunCommand(copy \\10.0.2.4\qemu\input\origin_21.xar c:\users\john\desktop\sample.xar)
         CheckStrStr(cannot)=(Y:Main_Sleep)
         CheckStrStr(network)=(Y:Main_Sleep)
 

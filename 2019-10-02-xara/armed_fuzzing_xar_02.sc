@@ -69,7 +69,6 @@ TestSample:
         goto(TestSample_decision)
 
     TestSample_Verify:
-        Call(FilterAddresses)
         TracerGetExceptionAddressStr
         Push
         CheckStrStrWQueue=(Y:TestSample_Interesting,N:TestSample_Interesting_Notify)
@@ -85,7 +84,15 @@ TestSample:
         goto(TestSample_decision)
 
     TestSample_Interesting_Notify:
-        Beep(New%20crash%20in%20Xara%20fuzzing)
+        TracerGetExceptionAddressStr
+        Push
+        Str(New%20crash%20in%20Xara%20fuzzing%3a%20)
+        StrCat
+        Push
+        Beep
+        TracerGetExceptionAddressStr
+        Push
+        Enqueue
 
     TestSample_Interesting:
         Call(BinCrash)
@@ -103,10 +110,16 @@ TestSample:
         Return
 
 BinCrash:
-    TracerGetExceptionAddressStr
-    Push
-    MutatorConfirmSample
-    Return
+    BinCrash_Confirm:
+        TracerGetExceptionAddressStr
+        Push
+        MutatorConfirmSample
+        CheckStrStr(network)=(Y:BinCrash_Sleep)
+        Return
+
+    BinCrash_Sleep:
+        Wait(2)
+        goto(BinCrash_Confirm)
 
 Restart:
     QemuQuit
@@ -177,6 +190,7 @@ StartFuzz:
         RunCommand
         CheckStrStr(cannot)=(Y:FuzzReload_Sleep)
 
+    #Call(FilterAddresses)
     QemuQuickSave
     Return
 

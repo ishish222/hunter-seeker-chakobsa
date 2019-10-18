@@ -139,14 +139,16 @@ Interesting:
     Continue=
 
 ReadFile_end:
-    TaintRegions
+    TaintLastRegion
     DisableReaction(ReadFile_end)
     Continue=
 
 StartAnalysis:
+    #TracerDebugLogEnable
+
     DumpMemory
-    SecureAllSections
-    AddScannedLocation(ESP:0x50)
+    #SecureAllSections
+    #AddScannedLocation(ESP:0x50)
 
 #    Call(RegisterEnableBuiltin)
 
